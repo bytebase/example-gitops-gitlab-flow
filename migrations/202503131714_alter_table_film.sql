@@ -1,0 +1,1 @@
+ALTER TABLE film IF EXISTS ADD COLUMN IF NOT EXISTS release_date date;
