@@ -1,0 +1,77 @@
+name: SQL review on pull request
+
+on:
+  pull_request:
+    branches:
+        - test
+        - prod
+    paths:
+        - "migrations/*.sql"
+
+jobs:
+  check-release-on-test:
+    permissions:
+        pull-requests: write # write permission required to allow the action writes the check results to the comment.
+    runs-on: ubuntu-latest # use self-hosted machines if your Bytebase runs in internal networks.
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # set GITHUB_TOKEN because the 'Check release' step needs it to comment the pull request with check results.
+      BYTEBASE_URL: https://demo.bytebase.com
+      BYTEBASE_SERVICE_ACCOUNT: ci@service.bytebase.com
+      BYTEBASE_PROJECT: "projects/project-sample"
+      BYTEBASE_TARGETS: "instances/test-sample-instance/databases/hr_test"
+      FILE_PATTERN: "migrations/*.sql"
+    if: github.base_ref == 'test'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Login to Bytebase
+        id: login
+        uses: bytebase/login-action@v1
+        with:
+          bytebase-url: ${{ env.BYTEBASE_URL }}
+          service-key: ${{ env.BYTEBASE_SERVICE_ACCOUNT }}
+          service-secret: ${{secrets.BYTEBASE_SERVICE_ACCOUNT_SECRET}} # Please use secrets for sensitive data in production.
+      - name: Check release
+        uses: bytebase/create-release-action@v1
+        with:
+          url: ${{ env.BYTEBASE_URL }}
+          token: ${{ steps.login.outputs.token }}
+          file-pattern: ${{ env.FILE_PATTERN }}
+          # fail the action if release checks report any error.
+          check-release: "FAIL_ON_ERROR"
+          project: ${{ env.BYTEBASE_PROJECT }}
+          targets: ${{ env.BYTEBASE_TARGETS }}
+          validate-only: true
+  check-release-on-prod:
+    permissions:
+        pull-requests: write # write permission required to allow the action writes the check results to the comment.
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # set GITHUB_TOKEN because the 'Check release' step needs it to comment the pull request with check results.
+      BYTEBASE_URL: https://demo.bytebase.com
+      BYTEBASE_SERVICE_ACCOUNT: ci@service.bytebase.com
+      BYTEBASE_PROJECT: "projects/project-sample"
+      BYTEBASE_TARGETS: "instances/prod-sample-instance/databases/hr_prod"
+      FILE_PATTERN: "migrations/*.sql"
+    if: github.base_ref == 'prod'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Login to Bytebase
+        id: login
+        uses: bytebase/login-action@v1
+        with:
+          bytebase-url: ${{ env.BYTEBASE_URL }}
+          service-key: ${{ env.BYTEBASE_SERVICE_ACCOUNT }}
+          service-secret: ${{secrets.BYTEBASE_SERVICE_ACCOUNT_SECRET}} # Please use secrets for sensitive data in production.
+      - name: Check release
+        uses: bytebase/create-release-action@v1
+        with:
+          url: ${{ env.BYTEBASE_URL }}
+          token: ${{ steps.login.outputs.token }}
+          file-pattern: ${{ env.FILE_PATTERN }}
+          # fail the action if release checks report any error.
+          check-release: "FAIL_ON_ERROR"
+          project: ${{ env.BYTEBASE_PROJECT }}
+          targets: ${{ env.BYTEBASE_TARGETS }}
+          validate-only: true
